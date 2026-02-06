@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  detox-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
