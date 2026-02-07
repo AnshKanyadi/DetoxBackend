@@ -23,8 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Install CPU-only PyTorch first (much smaller than full PyTorch)
-RUN pip install --no-cache-dir \
+# Install numpy first (compatible version), then CPU-only PyTorch
+RUN pip install --no-cache-dir "numpy<2.0.0" && \
+    pip install --no-cache-dir \
     torch==2.1.0+cpu \
     torchvision==0.16.0+cpu \
     -f https://download.pytorch.org/whl/cpu/torch_stable.html
