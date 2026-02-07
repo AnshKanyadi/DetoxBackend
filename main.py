@@ -343,7 +343,11 @@ async def analyze_image(request: AnalyzeRequest):
             # Run OCR
             logger.info(f"[{processing_id}] Running OCR...")
             ocr = get_ocr()
-            result = ocr.predict(img_array)
+            try:
+                result = ocr.ocr(img_array)
+            except Exception as ocr_err:
+                logger.error(f"[{processing_id}] OCR method error: {ocr_err}, trying predict...")
+                result = ocr.predict(img_array)
             
             # Clear image array immediately
             del img_array
@@ -357,8 +361,11 @@ async def analyze_image(request: AnalyzeRequest):
         detections = []
         all_text_parts = []
         
+        logger.info(f"[{processing_id}] Processing OCR result type: {type(result)}")
+        
         if result and len(result) > 0:
             for item in result:
+                # Handle new API format (dict with rec_texts)
                 if isinstance(item, dict):
                     texts = item.get('rec_texts', [])
                     scores = item.get('rec_scores', [])
@@ -390,6 +397,44 @@ async def analyze_image(request: AnalyzeRequest):
                                         confidence=float(confidence),
                                         bbox=bbox
                                     ))
+                
+                # Handle old API format (list of [polygon, (text, score)])
+                elif isinstance(item, list):
+                    for line in item:
+                        if not line or len(line) < 2:
+                            continue
+                        polygon = line[0]
+                        text_data = line[1]
+                        
+                        if isinstance(text_data, tuple) and len(text_data) >= 2:
+                            text = text_data[0]
+                            confidence = text_data[1]
+                        else:
+                            continue
+                        
+                        if not text or not text.strip():
+                            continue
+                        
+                        all_text_parts.append(text)
+                        
+                        if polygon and len(polygon) >= 4:
+                            xs = [p[0] for p in polygon]
+                            ys = [p[1] for p in polygon]
+                            bbox = BoundingBox(
+                                x=float(min(xs)),
+                                y=float(min(ys)),
+                                width=float(max(xs) - min(xs)),
+                                height=float(max(ys) - min(ys))
+                            )
+                            
+                            findings = detect_sensitive(text)
+                            for finding in findings:
+                                detections.append(Detection(
+                                    text=finding["text"],
+                                    type=finding["type"],
+                                    confidence=float(confidence),
+                                    bbox=bbox
+                                ))
         
         full_text = " ".join(all_text_parts)
         
