@@ -447,16 +447,16 @@ async def analyze_image(request: AnalyzeRequest):
 
 @app.on_event("startup")
 async def startup_event():
-    """Pre-warm OCR engine on startup"""
+    """Log startup - OCR loads lazily on first request"""
     logger.info("=" * 50)
     logger.info("DETOX API - Privacy-Focused OCR Service")
     logger.info("=" * 50)
     logger.info("Security: Images are NEVER stored or logged")
-    logger.info("Pre-warming OCR engine...")
-    get_ocr()
-    logger.info("Server ready!")
+    logger.info("Server ready! (OCR loads on first request)")
     logger.info("=" * 50)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
